@@ -5,7 +5,7 @@ Background: This program is being used for generating the invoices for Prikaway 
 
 Objective: This program aims at automating the invoice generation process as per the requirements received from the client
 
-Caution: This program takes the data from the google sheet which contains the sales data of the students. It also requires the json file generated via the google cloud platform to access the data. Also, there is a header file which is embedded in each of the invoices
+Caution: If you directly pull this repository and run the code then you will get an error as this program takes the data from the google sheet which contains the sales data of the students. It also requires the json file generated via the google cloud platform to access the data. Also, there is a header file which is embedded in each of the invoices
 
 Benefits: 
   
@@ -17,7 +17,7 @@ Benefits:
   
   4- Upon running the program a window interface pops up thus easing up the use and anyone even with limited knowledge can use it
   
-  5- The program automatically drops the students which have appied for Transfer/ Leave in the academic year. This was a specific requirement from the client
+  5- The program automatically drops the students which have applied for Transfer/ Leave in the academic year. This was a specific requirement from the client
   
   6- Program does multiple calculations and grouping on its own, thus eradicating the multiple edits if required in the google sheets file
 
