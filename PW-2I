@@ -1,0 +1,343 @@
+def formatINR(number):
+    s, *d = str(number).partition(".")
+    r = ",".join([s[x-2:x] for x in range(-3, -len(s), -2)][::-1] + [s[-3:]])
+    return "".join([r] + d)
+
+def number_to_word(number):
+    def get_word(n):
+        words={ 0:"", 1:"One", 2:"Two", 3:"Three", 4:"Four", 5:"Five", 6:"Six", 7:"Seven", 8:"Eight", 9:"Nine", 10:"Ten", 11:"Eleven", 12:"Twelve", 13:"Thirteen", 14:"Fourteen", 15:"Fifteen", 16:"Sixteen", 17:"Seventeen", 18:"Eighteen", 19:"Nineteen", 20:"Twenty", 30:"Thirty", 40:"Forty", 50:"Fifty", 60:"Sixty", 70:"Seventy", 80:"Eighty", 90:"Ninty" }
+        if n<=20:
+            return words[n]
+        else:
+            ones=n%10
+            tens=n-ones
+            return words[tens]+" "+words[ones]
+            
+    def get_all_word(n):
+        d=[100,10,100,100]
+        v=["","Hundred And","Thousand","lakh"]
+        w=[]
+        for i,x in zip(d,v):
+            t=get_word(n%i)
+            if t!="":
+                t+=" "+x
+            w.append(t.rstrip(" "))
+            n=n//i
+        w.reverse()
+        w=' '.join(w).strip()
+        if w.endswith("And"):
+            w=w[:-3]
+        return w
+
+    arr=str(number).split(".")
+    number=int(arr[0])
+    crore=number//10000000
+    number=number%10000000
+    word=""
+    if crore>0:
+        word+=get_all_word(crore)
+        word+=" crore "
+    word+=get_all_word(number).strip()+" Rupees"
+    if len(arr)>1:
+         if len(arr[1])==1:
+            arr[1]+="0"
+         word+=" and "+get_all_word(int(arr[1]))+" paisa"
+    return word
+
+def invoice_processing(var):
+    import pandas as pd
+    import gspread
+    from fpdf import FPDF
+    import dataframe_image as dfi
+    import time
+    from datetime import datetime, date
+    from prettytable import PrettyTable
+    from PIL import Image, ImageDraw, ImageFont
+    pdf=FPDF()
+    pdf.set_font("Arial", style="B",size = 10)
+    start_time = time.time()
+    gs=gspread.service_account(r'C:\Users\ayush\Downloads\Prikaway\Invoice Generating Program\python-access-357214-446b081bdda7.json')
+    gc=gs.open('Target File')
+    sl = gc.get_worksheet(0)
+    a=pd.DataFrame(sl.get_all_records())
+    a=a.set_index('TC/Leave')
+    a=a.drop(labels=['Yes'],axis=0)
+    a=a.reset_index()
+    
+    if var==-1:
+        b=a.pivot_table(index='Roll No.', values=['Name','House','Class','TC/Leave','Date of Purchase'], aggfunc='first')
+        for x in b.iterrows():
+            pdf.add_page()
+            pdf.image(r'C:\Users\ayush\Downloads\Prikaway\Invoice Generating Program\header_prika.png', w=190, h=15)
+            c=a[a['Roll No.'].isin([x[0]])]
+            j=PrettyTable()
+            j.add_column('Name',[x[1][3]])
+            j.add_column('Roll No.',[x[0]])
+            j.add_column('House',[x[1][2]])
+            j.add_column('Class',[x[1][0]])
+            j.add_column('Purchase Date',[x[1][1]])
+            j.add_column('Invoice No.',["PWPL/RW/22/"+str(x[0])])
+            im = Image.new("RGB", (500, 70), "white")
+            draw = ImageDraw.Draw(im)
+            font = ImageFont.load_default()
+            draw.text((0, 0), str(j), font=font, fill="black")
+            im.save("header for roll no_"+str(x[0])+".png")
+            pdf.image("header for roll no_"+str(x[0])+".png", w=193, h=20)
+            d=c.pivot_table(index='Item Purchased', values= ['Item Quantity','Total Price'], aggfunc='sum', margins=True, margins_name="Grand Total")
+            i=PrettyTable(['Item Purchased','Item Quantity','Total Price'])
+            for y in d.iterrows():
+                i.add_row([y[0],y[1][0],"{:,}".format(y[1][1])])
+            ip = Image.new("RGB", (480, 800), "white")
+            draw = ImageDraw.Draw(ip)
+            font = ImageFont.load_default()
+            draw.text((0, 0), str(i), font=font, fill="black")
+            ip.save("table for roll no_"+str(x[0])+".png")
+            pdf.image("table for roll no_"+str(x[0])+".png", w=193, h=224)
+            pdf.set_font("Arial", style="B",size = 10)
+            pdf.cell(200, 3, txt = "AMOUNT PAYABLE(In Words):"+'\t'*5+number_to_word(d.loc['Grand Total'][1]),ln = 1, align = 'L')
+            pdf.set_font("Arial", size = 8)
+            pdf.cell(200, 2, txt = "-"*200,ln = 1, align = 'L')
+            pdf.cell(200, 2, txt = "CADET'S SIGNATURE"+'\t'*55+"HOUSE MASTER SIGNATURE"+'\t'*50+"AUTHORISED SIGNATURE",ln = 1, align = 'L')
+            
+        pdf.output("Invoices.pdf")
+    
+    else:
+        pdf.add_page()
+        pdf.image(r'C:\Users\ayush\Downloads\Prikaway\Invoice Generating Program\header_prika.png', w=190, h=15)
+        c=a[a['Roll No.'].isin([var])]
+        c=c.reset_index()
+        j=PrettyTable()
+        j.add_column('Name',[c['Name'][0]])
+        j.add_column('Roll No.',[c['Roll No.'][0]])
+        j.add_column('House',[c['House'][0]])
+        j.add_column('Class',[c['Class'][0]])
+        j.add_column('Purchase Date',[c['Date of Purchase'][0]])
+        j.add_column('Invoice No.',["PWPL/RW/22/"+str(var)])
+        im = Image.new("RGB", (500, 70), "white")
+        draw = ImageDraw.Draw(im)
+        font = ImageFont.load_default()
+        draw.text((0, 0), str(j), font=font, fill="black")
+        im.save("header for roll no_"+str(var)+".png")
+        pdf.image("header for roll no_"+str(var)+".png", w=193, h=20)
+        d=c.pivot_table(index='Item Purchased', values= ['Item Quantity','Total Price'], aggfunc='sum', margins=True, margins_name="Grand Total")
+        i=PrettyTable(['Item Purchased','Item Quantity','Total Price'])
+        for y in d.iterrows():
+            i.add_row([y[0],y[1][0],"{:,}".format(y[1][1])])
+        ip = Image.new("RGB", (480, 800), "white")
+        draw = ImageDraw.Draw(ip)
+        font = ImageFont.load_default()
+        draw.text((0, 0), str(i), font=font, fill="black")
+        ip.save("table for roll no_"+str(var)+".png")
+        pdf.image("table for roll no_"+str(var)+".png", w=193, h=224)
+        pdf.cell(200, 3, txt = "AMOUNT PAYABLE(In Words):"+'\t'*5+number_to_word(d.loc['Grand Total'][1]),ln = 1, align = 'L')
+        pdf.set_font("Arial", size = 8)
+        pdf.cell(200, 2, txt = "-"*200,ln = 1, align = 'L')
+        pdf.cell(200, 2, txt = "CADET'S SIGNATURE"+'\t'*55+"HOUSE MASTER SIGNATURE"+'\t'*50+"AUTHORISED SIGNATURE",ln = 1, align = 'L')
+        pdf.output("Invoice for roll no_"+str(var)+'.pdf')
+
+    print("Time taken is",(time.time()-start_time))
+
+def pivot(dat,bill):
+    import pandas as pd
+    import gspread
+    from fpdf import FPDF
+    import time
+    from datetime import datetime, date
+    from prettytable import PrettyTable
+    from PIL import Image, ImageDraw, ImageFont
+
+    start_time = time.time()
+    gs=gspread.service_account(r'C:\Users\ayush\Downloads\Prikaway\Invoice Generating Program\python-access-357214-446b081bdda7.json')
+    gc=gs.open('Target File')
+    sl = gc.get_worksheet(0)
+    a=pd.DataFrame(sl.get_all_records())
+    a=a.set_index('TC/Leave')
+    a=a.drop(labels=['Yes'],axis=0)
+    a=a.reset_index()
+    d=a.pivot_table(index=['House','Name','Roll No.'], values=['Item Quantity','Total Price'], aggfunc='sum')
+    e=d.groupby(by='House', axis=0, level=1)
+    b=a.pivot_table(index=['Item Purchased'], values=['Item Quantity','Total Price'], aggfunc='sum', margins=True, margins_name='Grand Total')
+
+    pdf=FPDF()
+    pdf.set_font("Arial", style="B",size = 10)
+    pdf.add_page()
+    i=PrettyTable(['Item Purchased','Item Quantity','Total Price'])
+    for y in b.iterrows():
+        i.add_row([y[0],"{:,}".format(y[1][0]),formatINR(y[1][1])])
+    ip = Image.new("RGB", (480, 800), "white")
+    draw = ImageDraw.Draw(ip)
+    font = ImageFont.load_default()
+    draw.text((0, 0), str(i), font=font, fill="black")
+    ip.save("table for item list bill.png")
+    pdf.image(r'C:\Users\ayush\Downloads\Prikaway\Invoice Generating Program\header_prika.png', w=190, h=15)
+    pdf.cell(200, 2, txt = "-"*160,ln = 1, align = 'L')
+    pdf.cell(w=80, h = 4, txt = 'TO,'+'\t'*142+'BILL DATE: '+dat, ln = 1, align = 'L')
+    pdf.cell(w=80, h = 4, txt = 'THE PRINCIPAL'+'\t'*120+'BILL NO.:PWPL/RW/22/'+bill, ln = 1, align = 'L')
+    pdf.cell(w=80, h = 4, txt = 'SAINIK SCHOOL REWARI', ln = 1, align = 'L')
+    pdf.cell(200, 2, txt = "-"*160,ln = 1, align = 'L')
+    pdf.image("table for item list bill.png", w=193, h=224)
+    pdf.cell(200, 3, txt = "AMOUNT PAYABLE(In Words):"+'\t'*5+number_to_word(b.loc['Grand Total'][1]),ln = 1, align = 'L')
+    pdf.set_font("Arial", size = 8)
+    pdf.cell(200, 2, txt = "-"*200,ln = 1, align = 'L')
+    pdf.cell(w=80, h = 4, txt = "PRINCIPAL'S SIGNATURE"+'\t'*150+"AUTHORISED SIGNATURE",ln = 1, align = 'L')
+    
+    pdf.add_page()
+    b=a.pivot_table(index=['House'], values=['Item Quantity','Total Price'], aggfunc='sum', margins=True, margins_name='Grand Total')
+    i=PrettyTable(['House','Item Quantity','Total Price'])
+    for y in b.iterrows():
+        i.add_row([y[0],"{:,}".format(y[1][0]),formatINR(y[1][1])])
+    ip = Image.new("RGB", (300, 200), "white")
+    draw = ImageDraw.Draw(ip)
+    font = ImageFont.load_default()
+    draw.text((0, 0), str(i), font=font, fill="black")
+    ip.save("table for summary.png")
+    pdf.image(r'C:\Users\ayush\Downloads\Prikaway\Invoice Generating Program\header_prika.png', w=190, h=15)
+    pdf.ln(10)
+    pdf.set_font("Arial", style="B",size = 40)
+    pdf.cell(200, 10, txt = " Summary",ln = 2, align = 'C')
+    pdf.image("table for summary.png",x=40, y=120,  w=150, h=100)
+    
+    for x in e.groups:
+        d=e.get_group(x).pivot_table(index=['Name','Roll No.'], values=['Item Quantity','Total Price'], aggfunc='sum', margins=True, margins_name='Grand Total')
+        i=PrettyTable(['Name','Roll No.','Item Quantity','Total Price'])
+        pdf.add_page()
+        for y in d.iterrows():
+            i.add_row([y[0][0],y[0][1],"{:,}".format(y[1][0]),formatINR(y[1][1])])
+            
+        ip = Image.new("RGB", (400, 300), "white")
+        draw = ImageDraw.Draw(ip)
+        font = ImageFont.load_default()
+        draw.text((0, 0), str(i), font=font, fill="black")
+        ip.save("table for house_"+str(x)+".png")
+        pdf.image(r'C:\Users\ayush\Downloads\Prikaway\Invoice Generating Program\header_prika.png', w=190, h=15)
+        pdf.ln(10)
+        pdf.set_font("Arial", style="B",size = 40)
+        pdf.cell(200, 10, txt = x+" House",ln = 2, align = 'C')
+        pdf.image("table for house_"+str(x)+".png",x=25, y=90,  w=180, h=200)
+
+    pdf.output("Covers.pdf")
+    print("Time taken is",(time.time()-start_time))
+
+from tkinter import *
+from tkinter.ttk import Progressbar
+import threading
+from tkinter import ttk
+from tkinter.ttk import *
+from tkinter import messagebox
+import tkinter as tk  
+
+ws = Tk()
+ws.title('Invoice Processing Program')
+ws.geometry('200x200')
+ws.config(bg='#345')
+
+def all_inv():
+
+    frame =tk.Tk()
+    frame.title("Print All Invoices")
+    frame.geometry('600x100')
+    frame.config(bg='#345')
+    lbl=tk.Label(frame, text="ALL INVOICES HAVE BEEN SAVED TO THE DOWNLOADS FOLDER IN THE FILE INVOICES.pdf")
+    lbl.pack()
+    threading.Thread(target=invoice_processing(-1)).start()
+
+def cover():
+
+    frame =tk.Tk()
+    frame.title("Print All Cover Pages")
+    frame.geometry('600x200')
+    frame.config(bg='#345')
+    
+    def printInput():
+        inp = inputtxt.get(1.0, "end-1c")
+        inp1 = inputtxt1.get(1.0, "end-1c")
+        threading.Thread(target=pivot(inp,inp1)).start()
+        frame1 =tk.Tk()
+        frame1.title("Print All Cover Pages")
+        frame1.geometry('600x100')
+        frame1.config(bg='#345')
+        lbl=tk.Label(frame1, text="ALL COVER PAGES HAVE BEEN SAVED TO THE DOWNLOADS FOLDER IN THE FILE Covers.pdf")
+        lbl.pack()
+
+    lbl=tk.Label(frame, text="Enter Date of the bill in dd-mm-yyyy format")
+    lbl.pack()
+    # TextBox Creation
+    inputtxt = tk.Text(frame,
+                       height =1,
+                       width = 10)
+
+    inputtxt.pack()
+    
+    lbl=tk.Label(frame, text="Enter bill no. PWPL/RW/22/_")
+    lbl.pack()
+    
+    inputtxt1 = tk.Text(frame,
+                       height =1,
+                       width = 6)
+
+    inputtxt1.pack()
+    
+    # Button Creation
+    printButton = tk.Button(frame,
+                            text = "Print", 
+                            command = printInput)
+    printButton.pack()
+    
+
+def single_inv():
+    
+    frame = tk.Tk()
+    frame.title("Print Single Invoice")
+    frame.geometry('500x100')
+    frame.config(bg='#345')
+    # Function for getting Input
+    # from textbox and printing it 
+    # at label widget
+
+
+    def printInput():
+        inp = inputtxt.get(1.0, "end-1c")
+        threading.Thread(target=invoice_processing(int(inp))).start()
+        frame1 =tk.Tk()
+        frame1.title("Print All Cover Pages")
+        frame1.geometry('600x100')
+        frame1.config(bg='#345')
+        lbl=tk.Label(frame1, text="PLEASE CHECK THE DOWNLOADS FOLDER FOR THE INVOICE HAVING FILENAME"+'\n'+"Invoice for roll no_"+inp+".pdf")
+        lbl.pack()
+
+    # TextBox Creation
+    inputtxt = tk.Text(frame,
+                       height =1,
+                       width = 6)
+
+    inputtxt.pack()
+    # Button Creation
+    printButton = tk.Button(frame,
+                            text = "Print", 
+                            command = printInput)
+    printButton.pack()
+
+    # Label Creation  
+
+start = Button(
+    ws,
+    text='Print All',
+    command= all_inv
+    )
+
+start.pack()
+
+stop = Button(
+    ws,
+    text='Print Single', command=single_inv
+)
+stop.pack()
+
+cover = Button(
+    ws,
+    text='Print Cover Pages', command=cover
+    )
+
+cover.pack()
+
+ws.mainloop()
