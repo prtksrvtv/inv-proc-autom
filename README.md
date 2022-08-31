@@ -1,7 +1,7 @@
 # inv-proc-autom
 Invoice Processing Automation Program
 Background: This program is being used for generating the invoices for Prikaway Pvt. Ltd. which is a vendor for Government of India. My friend owns the company and he asked my help to setup the tech part of the operations. I have created the database for the company and developed the system of invoice generation using google sheets. It took approximately 8-9 hours earlier genearting the invoices for a batch of 200 students as the macro script had to be run manually for each student. Post that multile pivots had to be applied in order to create the cover pages
-Objective: This program aims at automating the invoice generation process as per the requirements received from the client
+</n>Objective: This program aims at automating the invoice generation process as per the requirements received from the client
 Caution: This program takes the data from the google sheet which contains the sales data of the students. It also requires the json file generated via the google cloud platform to access the data. Also, there is a header file which is embedded in each of the invoices
 Benefits: 
    1- The entire process of invoice generation for 200 students now takes approximately 30-35 seconds. A single pdf file is generated having individual invoices on each page, which can be printed easily (Print All Pages) thus saving a lot of time and effort
